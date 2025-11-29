@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Inventario</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Sección de Login -->
+    <div id="login-section" class="card">
+      <div class="card-header">
+        <h2>Iniciar Sesión</h2>
+        <p class="subtitle">Accede al sistema de inventario</p>
+      </div>
+      <div class="card-body">
+        <div id="login-message" class="message message-error"></div>
+        <form id="login-form" onsubmit="doLogin(event)">
+          <div class="form-group">
+            <label for="login-username">Usuario</label>
+            <input type="text" id="login-username" class="form-input" autocomplete="username" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <input type="password" id="login-password" class="form-input" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Sección de Productos -->
+    <div id="products-section" class="hidden">
+      <div class="header">
+        <div class="header-content">
+          <h1>Sistema de Inventario</h1>
+          <div class="user-actions">
+            <span id="user-info" class="user-badge"></span>
+            <button onclick="logout()" class="btn btn-secondary">Cerrar Sesión</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- Lista de Productos -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Productos</h2>
+            <button onclick="toggleCreateForm()" class="btn btn-primary" id="toggle-create-btn">
+              + Nuevo Producto
+            </button>
+          </div>
+          <div class="card-body">
+            <div id="products-message" class="message"></div>
+            <div class="table-container">
+              <table id="products-table" class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Filas dinámicas -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario de Creación -->
+        <div id="create-form-section" class="card hidden">
+          <div class="card-header">
+            <h2>Nuevo Producto</h2>
+            <button onclick="toggleCreateForm()" class="btn btn-text">✕</button>
+          </div>
+          <div class="card-body">
+            <div id="create-message" class="message"></div>
+            <form id="create-form" onsubmit="createProduct(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="prod-nombre">Nombre *</label>
+                  <input type="text" id="prod-nombre" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label for="prod-precio">Precio *</label>
+                  <input type="number" step="0.01" id="prod-precio" class="form-input" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="prod-descripcion">Descripción</label>
+                <textarea id="prod-descripcion" class="form-input" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="prod-stock">Stock Inicial</label>
+                <input type="number" id="prod-stock" class="form-input" value="0">
+              </div>
+              <div class="form-actions">
+                <button type="button" onclick="toggleCreateForm()" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear Producto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Confirmar Eliminación</h3>
+      </div>
+      <div class="modal-body">
+        <p id="modal-message"></p>
+      </div>
+      <div class="modal-actions">
+        <button onclick="closeModal()" class="btn btn-secondary">Cancelar</button>
+        <button onclick="confirmDelete()" class="btn btn-danger">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* styles.css */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --secondary: #64748b;
+      --danger: #ef4444;
+      --danger-dark: #dc2626;
+      --success: #10b981;
+      --error: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-header h2 {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .subtitle {
+      color: var(--text-light);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* Login Section */
+    #login-section {
+      max-width: 420px;
+      margin: 80px auto;
+    }
+
+    /* Header */
+    .header {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      padding: 24px;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .user-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-badge {
+      background: #dbeafe;
+      color: var(--primary);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    textarea.form-input {
+      resize: vertical;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: var(--danger-dark);
+    }
+
+    .btn-text {
+      background: transparent;
+      color: var(--text-light);
+      padding: 8px;
+    }
+
+    .btn-text:hover {
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table th {
+      background: var(--bg);
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-light);
+    }
+
+    .data-table tbody tr {
+      transition: background 0.2s;
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--bg);
+    }
+
+    /* Messages */
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .message-success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      border-radius: 12px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .modal-actions {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .table-container {
+        margin: 0 -24px;
+        padding: 0 24px;
+      }
+    }
+  </style>
+
+  <script>
+    const AUTH_URL = "http://localhost:30001";
+    const PRODUCT_URL = "http://localhost:30002";
+
+    let deleteProductId = null;
+
+    // Session Management
+    const storage = {
+      token: null,
+      role: null
+    };
+
+    function getToken() {
+      return storage.token;
+    }
+
+    function getRole() {
+      return storage.role;
+    }
+
+    function setSession(token, role) {
+      storage.token = token;
+      storage.role = role;
+    }
+
+    function clearSession() {
+      storage.token = null;
+      storage.role = null;
+    }
+
+    // Initialize
+    window.onload = function() {
+      const token = getToken();
+      if (token) {
+        showProductsSection();
+        loadProducts();
+      } else {
+        showLoginSection();
+      }
+    };
+
+    // Navigation
+    function showLoginSection() {
+      document.getElementById("login-section").classList.remove("hidden");
+      document.getElementById("products-section").classList.add("hidden");
+    }
+
+    function showProductsSection() {
+      document.getElementById("login-section").classList.add("hidden");
+      document.getElementById("products-section").classList.remove("hidden");
+      const role = getRole();
+      document.getElementById("user-info").innerText = `Rol: ${role}`;
+    }
+
+    function toggleCreateForm() {
+      const section = document.getElementById("create-form-section");
+      const btn = document.getElementById("toggle-create-btn");
+      section.classList.toggle("hidden");
+      btn.style.display = section.classList.contains("hidden") ? "block" : "none";
+    }
+
+    // Messages
+    function showMessage(elementId, text, type = "error") {
+      const el = document.getElementById(elementId);
+      el.innerText = text;
+      el.className = `message message-${type} show`;
+      setTimeout(() => {
+        el.classList.remove("show");
+      }, 5000);
+    }
+
+    function clearMessage(elementId) {
+      const el = document.getElementById(elementId);
+      el.innerText = "";
+      el.className = "message";
+    }
+
+    // Auth
+    async function doLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById("login-username").value;
+      const password = document.getElementById("login-password").value;
+      clearMessage("login-message");
+
+      try {
+        const res = await fetch(AUTH_URL + "/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showMessage("login-message", err.message || "Error en login", "error");
+          return;
+        }
+
+        const data = await res.json();
+        setSession(data.access_token, data.role || "USER");
+        showProductsSection();
+        loadProducts();
+      } catch (err) {
+        showMessage("login-message", "Error de conexión", "error");
+        console.error(err);
+      }
+    }
+
+    function logout() {
+      clearSession();
+      showLoginSection();
+      document.getElementById("login-form").reset();
+    }
+
+    // Products
+    async function loadProducts() {
+      const token = getToken();
+      clearMessage("products-message");
+      const tbody = document.querySelector("#products-table tbody");
+      tbody.innerHTML = "<tr><td colspan='6' style='text-align:center'>Cargando...</td></tr>";
+
+      if (!token) {
+        showMessage("products-message", "No hay sesión activa", "error");
+        tbody.innerHTML = "";
+        return;
+      }
+
+      try {
+        const res = await fetch(PRODUCT_URL + "/products", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showMessage("products-message", err.message || "Error al cargar productos", "error");
+          tbody.innerHTML = "";
+          return;
+        }
+
+        const productos = await res.json();
+        tbody.innerHTML = "";
+
+        if (productos.length === 0) {
+          tbody.innerHTML = "<tr><td colspan='6' style='text-align:center'>No hay productos</td></tr>";
+          return;
+        }
+
+        productos.forEach(p => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${p.id}</td>
+            <td><strong>${p.nombre}</strong></td>
+            <td>${p.descripcion || "-"}</td>
+            <td>$${parseFloat(p.precio).toFixed(2)}</td>
+            <td>${p.stock}</td>
+            <td>
+              <button onclick="openDeleteModal(${p.id}, '${p.nombre}')" class="btn btn-danger btn-sm">
+                Eliminar
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        showMessage("products-message", "Error de conexión", "error");
+        tbody.innerHTML = "";
+        console.error(err);
+      }
+    }
+
+    async function createProduct(event) {
+      event.preventDefault();
+      const token = getToken();
+      const role = getRole();
+      clearMessage("create-message");
+
+      if (!token) {
+        showMessage("create-message", "No hay sesión activa", "error");
+        return;
+      }
+
+      if (role !== "ADMIN" && role !== "EDITOR") {
+        showMessage("create-message", "No tiene permiso para crear productos", "error");
+        return;
+      }
+
+      const nombre = document.getElementById("prod-nombre").value;
+      const descripcion = document.getElementById("prod-descripcion").value;
+      const precio = parseFloat(document.getElementById("prod-precio").value);
+      const stock = parseInt(document.getElementById("prod-stock").value || "0");
+
+      try {
+        const res = await fetch(PRODUCT_URL + "/products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ nombre, descripcion, precio, stock })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showMessage("create-message", err.message || "Error al crear producto", "error");
+          return;
+        }
+
+        document.getElementById("create-form").reset();
+        document.getElementById("prod-stock").value = "0";
+        showMessage("create-message", "Producto creado exitosamente", "success");
+        toggleCreateForm();
+        loadProducts();
+      } catch (err) {
+        showMessage("create-message", "Error de conexión", "error");
+        console.error(err);
+      }
+    }
+
+    // Modal
+    function openDeleteModal(id, nombre) {
+      const role = getRole();
+      if (role !== "ADMIN") {
+        showMessage("products-message", "Solo ADMIN puede eliminar productos", "error");
+        return;
+      }
+
+      deleteProductId = id;
+      document.getElementById("modal-message").innerText = 
+        `¿Está seguro de eliminar el producto "${nombre}"?`;
+      document.getElementById("modal-overlay").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      deleteProductId = null;
+      document.getElementById("modal-overlay").classList.add("hidden");
+    }
+
+    async function confirmDelete() {
+      if (!deleteProductId) return;
+
+      const token = getToken();
+      clearMessage("products-message");
+
+      try {
+        const res = await fetch(PRODUCT_URL + "/products/" + deleteProductId, {
+          method: "DELETE",
+          headers: { "Authorization": "Bearer " + token }
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showMessage("products-message", err.message || "Error al eliminar producto", "error");
+          closeModal();
+          return;
+        }
+
+        showMessage("products-message", "Producto eliminado exitosamente", "success");
+        closeModal();
+        loadProducts();
+      } catch (err) {
+        showMessage("products-message", "Error de conexión", "error");
+        closeModal();
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>

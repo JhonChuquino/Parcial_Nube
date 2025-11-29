@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: inventario
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth-service
+        image: jhonchuquino/auth-service:v1   # tu imagen buena
+        ports:
+        - containerPort: 5001
+        env:
+        - name: DB_HOST
+          value: "inventario-postgres"   # nombre del Service de Postgres
+        - name: DB_NAME
+          value: "inventario_db"         # ***OJO***: igual que POSTGRES_DB del pod de Postgres
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASS
+          value: "postgres"
+        - name: SECRET_KEY
+          value: "dev-secret"

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: inventario
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product
+  template:
+    metadata:
+      labels:
+        app: product
+    spec:
+      containers:
+      - name: product-service
+        image: jhonchuquino/product-service:v1
+        ports:
+        - containerPort: 5002
+        env:
+        - name: DB_HOST
+          value: "inventario-postgres"
+        - name: DB_NAME
+          value: "inventario_db"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASS
+          value: "postgres"
